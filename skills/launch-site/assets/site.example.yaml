@@ -1,0 +1,135 @@
+# Site manifest (version 1) — everything that differs between sites.
+# Copy to site.yaml at the project root and fill in.
+#
+# This file must never hold a secret. Reference each secret either as
+#   { file: <any git-ignored path> }   e.g. a .pem at the repo root, or .secrets/x
+#   { env: <VAR> }                     read from .env.<env>[.local]
+# Paths are relative to this file.
+#
+# Who reads what:
+#   the launch-site skill    every section (as a checklist and source of values)
+#   ShipAny `pnpm site:config`   only `config:` — written into the D1 config table
+#   ShipAny `pnpm rbac:init`     admin.email via --admin-email=
+
+version: 1
+
+# Day-0 long-lead items (SKILL.md phase 0). Track status here.
+long_lead:
+  payment_merchant_review: not_started # not_started | submitted | approved
+  domain_ns_active: false
+  google_oauth_consent: not_started
+  email_sending_domain: not_started
+
+site:
+  domain: example.com # apex; www.<domain> is added as a second custom domain
+  app_url: https://example.com
+  brand:
+    name: Example AI # → VITE_APP_NAME
+    description: One line that sells the product. # → VITE_APP_DESCRIPTION
+    logo: /logo.svg # → VITE_APP_LOGO
+  locales: [en] # first entry is the default locale
+  support_email: support@example.com
+
+seo:
+  title: Example AI — what it does in five words
+  description: 150-character meta description for the homepage.
+  keywords:
+    - primary keyword
+    - secondary keyword
+  og_image: /imgs/og.png
+  indexnow: true
+
+cloudflare:
+  account_id: '' # 32-char hex; empty = wrangler's logged-in default
+  worker_name: example-ai
+  wrangler_config: wrangler.production.jsonc
+  d1_database: example-ai-db # binding DB
+  r2_bucket: example-ai-media # binding R2_BUCKET — PRIVATE (user uploads, outputs)
+  r2_public_bucket: example-ai-public # samples, posters, case videos — the only public bucket
+  # Separate staging worker for payment/sign-in tests (SKILL.md phase 2).
+  test:
+    worker_name: example-ai-test # deployed on workers.dev, noindex, no prod domain
+    wrangler_config: wrangler.test.jsonc
+    d1_database: example-ai-test-db
+  # Worker secrets pushed with `wrangler secret put` (values from files):
+  secrets:
+    AUTH_SECRET: { file: .secrets/auth_secret }
+    CONFIG_ENCRYPTION_KEY: { file: .secrets/config_encryption_key }
+
+admin:
+  email: you@example.com # granted super_admin (the only default role that opens /admin)
+
+pricing:
+  currency: USD
+  # Credit packs. Phase 3 syncs them to Waffo and writes the product mapping.
+  products:
+    - id: starter
+      credits: 100
+      price: 9.9
+    - id: pro
+      credits: 500
+      price: 39
+
+# AI demo assets (references/content-assets.md). Agree on these before rendering.
+assets:
+  per_scene: 2
+  budget_renders: 8 # hard stop; no extra renders past this
+  max_retries_per_case: 2
+  give_up_after_rounds: 3 # then drop the scene instead of retrying forever
+  must_have:
+    - subject matches the input photo (colour, body shape)
+    - action completes; no plate numbers
+  acceptable:
+    - original badges on the subject
+  reject:
+    - visible faces
+    - large third-party brand text
+
+payments:
+  waffo:
+    sync_products: true
+    register_webhook: true
+
+# Rows for the D1 `config` table — the same keys Admin → Settings saves
+# (names in src/modules/config/settings.ts). Value forms:
+#   key: text | number | boolean
+#   key: { file: path }   file contents, trimmed
+#   key: { env: VAR }     from .env.<env>[.local] or the shell
+#                         (secret keys — *_secret, *_api_key, *_private_key,
+#                         password fields, … — must use file or env)
+#   key: { json: ... }    stored as a JSON string
+# Protected keys (auth_secret, database_*, db_*) are refused — they belong
+# in Worker secrets/vars.
+config:
+  app_name: Example AI
+  app_url: https://example.com
+
+  # Google OAuth
+  google_auth_enabled: true
+  google_one_tap_enabled: false
+  google_client_id: 000000000000-xxxxxxxx.apps.googleusercontent.com
+  google_client_secret: { file: .secrets/google_client_secret }
+
+  # Payments
+  select_payment_enabled: true
+  default_payment_provider: waffo
+
+  # PayPal
+  paypal_enabled: true
+  paypal_environment: live # sandbox | live
+  paypal_client_id: your-paypal-client-id
+  paypal_client_secret: { file: .secrets/paypal_client_secret }
+  paypal_webhook_id: your-webhook-id
+
+  # Waffo (merchant/store ids come from the Waffo dashboard)
+  waffo_enabled: true
+  waffo_environment: production # test | production
+  waffo_merchant_id: MER_xxxxxxxx
+  waffo_store_id: STO_xxxxxxxx
+  waffo_private_key: { file: waffo-private-key-KEY_xxxx.pem } # or { env: WAFFO_PRIVATE_KEY }
+  # Filled by phase 3 (waffo bootstrap) — leave out until then:
+  # waffo_product_ids_mapping: { json: { starter: PROD_xxx, pro: PROD_yyy } }
+
+  # Email
+  resend_sender_email: noreply@example.com
+  resend_api_key: { env: RESEND_API_KEY }

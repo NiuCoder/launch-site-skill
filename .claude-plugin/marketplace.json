@@ -1,0 +1,11 @@
+{
+  "name": "launch-site-skill",
+  "owner": { "name": "NiuCoder" },
+  "plugins": [
+    {
+      "name": "launch-site",
+      "source": "./",
+      "description": "Launch a website end to end on Cloudflare Workers: domain, D1/R2, secrets, Google sign-in, payments, SEO and verified go-live, with a pitfall list from real launches."
+    }
+  ]
+}

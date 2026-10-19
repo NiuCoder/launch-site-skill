@@ -1,0 +1,9 @@
+{
+  "name": "launch-site",
+  "version": "1.0.0",
+  "description": "Launch a website end to end on Cloudflare Workers: domain, D1/R2, secrets, Google sign-in, payments, SEO and verified go-live, with a pitfall list from real launches.",
+  "author": { "name": "NiuCoder" },
+  "repository": "https://github.com/NiuCoder/launch-site-skill",
+  "license": "MIT",
+  "keywords": ["launch", "cloudflare", "workers", "seo", "payments", "skill"]
+}

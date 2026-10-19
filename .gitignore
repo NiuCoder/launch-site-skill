@@ -1,0 +1,13 @@
+.DS_Store
+.secrets/
+*.pem
+*.key
+.env*
+*.db
+data/
+node_modules/
+.output/
+.nitro/
+src/paraglide/
+src/routeTree.gen.ts
+*.log
