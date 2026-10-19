@@ -44,6 +44,28 @@ bash <skill-dir>/scripts/preflight.sh --domain <domain>     # 只读，不改任
 
 模拟测试通过不等于已部署；已部署不等于业务验收。没做的写"未验收"，不要写"应该没问题"。
 
+## 密钥交接：什么时候、怎么交给 agent
+
+agent 弹不出安全的输入框，聊天记录也不是安全通道：**永远不要请用户把密钥贴进聊天**。没有密钥，后面的自动化就停在那里，所以每到需要密钥的阶段，必须先停下来，按下表引导用户完成交接，确认到位后再继续。
+
+**交接方式**（让用户二选一，每把密钥都要明确用哪种）：
+
+| 方式 | 用户做什么 | agent 之后怎么用 |
+|---|---|---|
+| A. 放进本地文件 | 把密钥存成仓库里被 git 忽略的文件（如根目录的 `*.pem`、`.secrets/<name>`），或写进 `.env.production` 的一个变量 | `site.yaml` 写 `{ file: ... }` / `{ env: ... }`；推 Worker secret 时用 `< 文件` 走 stdin |
+| B. 用户自己在终端输入 | 在终端运行 agent 给出的命令，例如 `npx wrangler secret put WAFFO_PRIVATE_KEY --config <cfg>`，按提示粘贴（不回显） | agent 只用 `wrangler secret list` 确认名字存在 |
+
+**交接节点**（第 1 阶段先列出完整的"密钥清单"表：名称、用途、放在哪里（Worker secret / D1 配置）、谁去哪里拿、交接方式、状态；之后到对应阶段逐个收）：
+
+| 阶段 | 需要的密钥 | 说明 |
+|---|---|---|
+| 第 3 阶段之前 | `AUTH_SECRET`、`CONFIG_ENCRYPTION_KEY` | agent 用 `openssl rand -base64 32` 生成到 `.secrets/` 下的文件，**并请用户立刻备份到密码管理器**：`CONFIG_ENCRYPTION_KEY` 推上去以后读不回来，丢了就再也写不了加密配置（pitfalls P12） |
+| 第 5 阶段之前 | Google OAuth client secret | 用户在 GCP 创建 Web Client 后交接 |
+| 第 6 阶段之前（测试） | 支付测试密钥（Waffo 测试私钥、PayPal sandbox secret） | |
+| 商户审核通过后（生产） | 支付生产密钥（Waffo 生产私钥、PayPal live secret） | 和测试密钥是两把不同的 key（pitfalls P3）；交接后先核对形状（单行 Base64 / PEM、长度），确认没有填错变量名（pitfalls P13） |
+
+交接后只核对名字、长度和格式，不读内容。
+
 ## 第 0 阶段：先启动耗时最长的事（第一天就做）
 
 这些要等外部审核，和开发并行推进，不要等网站做完再开始：
@@ -61,6 +83,7 @@ bash <skill-dir>/scripts/preflight.sh --domain <domain>     # 只读，不改任
 ## 第 1 阶段：站点清单和预检
 
 1. 没有 `site.yaml` 就从 [assets/site.example.yaml](assets/site.example.yaml) 复制，和用户逐段填写。字段说明见 [references/site-manifest.md](references/site-manifest.md)。
+1. 输出"密钥清单"表（见上面"密钥交接"），和用户确认每把密钥的交接方式和时间点。
 2. 跑 `preflight.sh`，修掉所有 FAIL。WARN 逐条和用户确认。
 3. 新克隆的项目先 `build` 再跑测试：生成文件（路由树、i18n 编译产物）不存在时测试会失败。
 
@@ -106,7 +129,7 @@ Google OAuth Web Client 的来源填 `https://<domain>`，回调填项目实际�
 
 ## 第 6 阶段：支付
 
-先在测试环境走完一笔真实测试付款，再切生产。对照 pitfalls.md 的"支付"小节。必须验证：
+先在测试环境走完一笔真实测试付款，再切生产。切生产前先按"密钥交接"收生产密钥；本地没有 `CONFIG_ENCRYPTION_KEY` 原值时，按 shipany-template.md 的"没有加密 key 原值时"处理。对照 pitfalls.md 的"支付"小节。必须验证：
 
 1. 结账金额和本地价格一致（改了本地价格不会自动更新远端商品）；
 2. 付款成功后积分或订阅到账；

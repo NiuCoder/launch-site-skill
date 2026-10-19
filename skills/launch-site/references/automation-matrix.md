@@ -84,7 +84,7 @@
 | # | 步骤 | 方式 | 状态 | 做法 | 备注 |
 |---|---|---|---|---|---|
 | F1 | merchant id、store id、API 私钥 | browser | 🔴 | Waffo 控制台 | 测试和生产是两把不同的 key，见 pitfalls P3 |
-| F2 | 同步商品 + 注册 webhook | api | 🟡 | 项目的 bootstrap 脚本或后台接口 | 运行前看已有 webhook，见 pitfalls P4 |
+| F2 | 同步商品 + 注册 webhook | api | ✅ | `pnpm waffo:bootstrap --env=production --key=<私钥文件> [--existing=<本地ID>:<PROD_ID>]` | 运行前看已有 webhook（P4）；用生产 key 直接创建生产商品，不 publish（P11）；跑完用 GraphQL 回读（P5） |
 | F3 | 写入商品映射 | script | ✅ | `{ json: ... }` 写进 `site.yaml`，再跑 C4 | |
 
 ## G. 内容与 SEO

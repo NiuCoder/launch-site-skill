@@ -40,6 +40,15 @@ pnpm site:config --from=site.yaml --env=production --d1=remote --config=<cfg>   
 - D1 配置不走缓存，写入后下一个请求就生效，不用重新部署；
 - 只改支付时，`site.yaml` 只写要改的几个键，不列出的键不会被改动。
 
+## 没有加密 key 原值时
+
+本地找不到 `CONFIG_ENCRYPTION_KEY` 原值，`site:config` 就写不了密钥类配置（它拒绝明文写入，也不能换 key）。这时改成用 Worker secret 提供密钥，后台配置只写非密钥项：
+
+1. `npx wrangler secret put <ENV_NAME> --config <cfg> < <密钥文件>`（变量名是配置键的大写，例如 `waffo_private_key` → `WAFFO_PRIVATE_KEY`，由 `src/config/index.ts` 读取）；
+2. **删掉 D1 `config` 表里同名的行**：配置合并规则是 D1 优先于环境变量，旧值留着会把 Worker secret 盖掉；
+3. 非密钥项照常用 `site:config` 写；
+4. 回读确认：`wrangler secret list` 有这个名字，D1 里没有同名行。
+
 ## 找密钥（只看名字）
 
 `--dry-run` 报 `cannot read file` 或 `is not set` 时：

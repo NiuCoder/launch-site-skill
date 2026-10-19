@@ -111,6 +111,19 @@
 原因：浏览器保存的站点权限阻止了访问。
 做法：请用户检查设置；不要换浏览器或换域名去绕过。
 
+**P11. 生产 bootstrap 报 "No test version found"，脚本停在第一个商品。**
+原因：用生产 API Key 创建的商品已经是生产版本；`publish()` 的作用是把测试版本推到生产，对没有测试版本的商品会失败。脚本中途失败，已创建的商品不会回滚，后面的商品和 webhook 都没做。
+做法：生产 bootstrap 不调用 `publish()`。中途失败后先用 GraphQL 只读查询商品（`onetimeProducts { id name hasProdVersion }`）和 webhook（`stores { storeWebhooks { id url testMode } }`），再用 `--existing=<本地ID>:<PROD_ID>` 复用已创建的商品继续，不要重新创建。
+
+**P12. 本地丢了 `CONFIG_ENCRYPTION_KEY` 原值。**
+原因：Worker secret 推上去以后读不回来，本地又没留备份。
+做法：生成时就让用户备份到密码管理器。已经丢了就不要换 key：密钥类配置改用 Worker secret，并删掉 D1 里的同名行（见 shipany-template.md"没有加密 key 原值时"）。
+
+**P13. 生产私钥填进了别的变量名。**
+症状：`.env.production` 里 `CONFIG_ENCRYPTION_KEY` 有 1600 多个字符（正常是 44 个）。
+原因：用户手动整理 env 文件时放错了行。
+做法：`site:config` 会拒绝长度超过 128 或 PEM 形状的加密 key；交接后用 `awk` 只看变量名和长度核对，发现异常请用户自己改，不要替用户猜。
+
 ## SEO 与内容
 
 **S1. 只有首页有 OG 图、Twitter 卡片和语言 alternate。**
